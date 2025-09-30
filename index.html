@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventory Sederhana</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f6f9;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      color: #444;
+    }
+    form {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      max-width: 400px;
+      margin: 0 auto 20px auto;
+    }
+    form label {
+      display: block;
+      margin: 8px 0;
+    }
+    form input {
+      padding: 6px;
+      margin-left: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    form button {
+      margin-top: 10px;
+      padding: 8px 15px;
+      background: #4CAF50;
+      border: none;
+      color: white;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    form button:hover {
+      background: #45a049;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #4CAF50;
+      color: white;
+    }
+    tr:hover {
+      background: #f1f1f1;
+    }
+
+    input[type="number"] {
+      width: 60px;
+      padding: 4px;
+      text-align: center;
+    }
+
+    /* Tombol kecil */
+    td button {
+      padding: 5px 8px;
+      margin: 2px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    td button:hover {
+      opacity: 0.8;
+    }
+    .btn-plus {
+      background: #2196F3;
+      color: white;
+    }
+    .btn-minus {
+      background: #f39c12;
+      color: white;
+    }
+    .btn-hapus {
+      background: #e74c3c;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h2>📦 Inventory Barang</h2>
+
+  <form id="formBarang">
+    <label>Nama Barang: <input type="text" id="nama" required></label>
+    <label>Jumlah: <input type="number" id="jumlah" required min="1"></label>
+    <label>Harga: <input type="number" id="harga" required min="0"></label>
+    <button type="submit">Tambah Barang</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nama</th>
+        <th>Jumlah</th>
+        <th>Harga</th>
+        <th>Total</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="tabelBarang"></tbody>
+  </table>
+
+  <script>
+    const form = document.getElementById('formBarang');
+    const tabelBody = document.getElementById('tabelBarang');
+    let dataBarang = [];
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      let nama = document.getElementById('nama').value.trim();
+      let jumlah = parseInt(document.getElementById('jumlah').value);
+      let harga = parseInt(document.getElementById('harga').value);
+
+      if (!nama || isNaN(jumlah) || jumlah < 1 || isNaN(harga) || harga < 0) {
+        alert("Input tidak valid!");
+        return;
+      }
+
+      dataBarang.push({ nama, jumlah, harga });
+      tampilkanBarang();
+      form.reset();
+    });
+
+    function tampilkanBarang() {
+      tabelBody.innerHTML = "";
+      dataBarang.forEach((barang, i) => {
+        let total = barang.jumlah * barang.harga;
+        let row = `
+          <tr>
+            <td>${i+1}</td>
+            <td>${barang.nama}</td>
+            <td>
+              <input type="number" value="${barang.jumlah}" min="1" 
+                     onchange="ubahJumlah(${i}, this.value)">
+              <button class="btn-plus" onclick="tambahStok(${i})">+</button>
+              <button class="btn-minus" onclick="kurangStok(${i})">-</button>
+            </td>
+            <td>Rp ${barang.harga.toLocaleString()}</td>
+            <td>Rp ${total.toLocaleString()}</td>
+            <td><button class="btn-hapus" onclick="hapusBarang(${i})">Hapus</button></td>
+          </tr>
+        `;
+        tabelBody.innerHTML += row;
+      });
+    }
+
+    function hapusBarang(i) {
+      if (confirm("Yakin hapus barang ini?")) {
+        dataBarang.splice(i, 1);
+        tampilkanBarang();
+      }
+    }
+
+    function tambahStok(i) {
+      dataBarang[i].jumlah++;
+      tampilkanBarang();
+    }
+
+    function kurangStok(i) {
+      if (dataBarang[i].jumlah > 1) {
+        dataBarang[i].jumlah--;
+      } else {
+        alert("Jumlah stok minimal 1");
+      }
+      tampilkanBarang();
+    }
+
+    function ubahJumlah(i, nilaiBaru) {
+      let val = parseInt(nilaiBaru);
+      if (isNaN(val) || val < 1) {
+        alert("Jumlah stok minimal 1");
+        tampilkanBarang();
+        return;
+      }
+      dataBarang[i].jumlah = val;
+      tampilkanBarang();
+    }
+  </script>
+</body>
+</html>
