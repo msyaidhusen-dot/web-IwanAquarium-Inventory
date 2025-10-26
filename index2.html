@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Inventori Barang</title>
+    <!-- Memuat Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat jsPDF untuk fitur unduh PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* Menggunakan font Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar (optional, tapi bagus) */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2d3748; /* bg-gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568; /* bg-gray-600 */
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #718096; /* bg-gray-500 */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        
+        <header class="mb-8">
+            <h2 class="text-2xl font-semibold text-center text-green-400 mb-2">SELAMAT DATANG DI GUDANG IWAN AQUARIUM</h2>
+            <h1 class="text-4xl font-bold text-center text-blue-400">Sistem Inventori Barang</h1>
+            <p id="authStatus" class="text-center text-gray-400 mt-2">Menghubungkan ke database...</p>
+            <p id="userIdDisplay" class="text-center text-xs text-gray-500 mt-1 break-all"></p>
+        </header>
+
+        <!-- Form Tambah Barang -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Tambah Barang Baru</h2>
+            <form id="itemForm" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div class="md:col-span-2">
+                    <label for="itemName" class="block mb-2 text-sm font-medium text-gray-300">Nama Barang</label>
+                    <input type="text" id="itemName" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                </div>
+                <div class="md:col-span-1">
+                    <label for="itemSku" class="block mb-2 text-sm font-medium text-gray-300">SKU / Kode</label>
+                    <input type="text" id="itemSku" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                </div>
+                <div class="md:col-span-1">
+                    <label for="itemType" class="block mb-2 text-sm font-medium text-gray-300">Jenis</U> (Tipe)</label>
+                    <input type="text" id="itemType" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                </div>
+                 <div class="md:col-span-1">
+                    <label for="itemPrice" class="block mb-2 text-sm font-medium text-gray-300">Harga (Rp)</label>
+                    <input type="number" id="itemPrice" min="0" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                </div>
+                <div class="md:col-span-1">
+                    <label for="itemQuantity" class="block mb-2 text-sm font-medium text-gray-300">Jumlah</label>
+                    <input type="number" id="itemQuantity" min="0" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                </div>
+                <div class="md:col-span-6">
+                    <button type="submit" class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition-colors duration-200">
+                        Tambah ke Inventori
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Fitur Ekstra: Import/Export -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-lg font-semibold mb-2 text-green-400">Import dari CSV</h3>
+                <p class="text-sm text-gray-400 mb-3">Format: <code>nama,sku,jumlah,harga,jenis</code> (tanpa header).</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="file" id="csvFile" accept=".csv" class="block w-full text-sm text-gray-400
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-lg file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-600 file:text-white
+                        hover:file:bg-blue-700 transition-colors duration-200 cursor-pointer"/>
+                    <button id="importCsvBtn" class="text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5 transition-colors duration-200 whitespace-nowrap">
+                        Import CSV
+                    </button>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-2 text-purple-400">Export Data</h3>
+                <p class="text-sm text-gray-400 mb-3">Unduh semua data inventori saat ini sebagai file PDF.</p>
+                <button id="downloadPdfBtn" class="w-full text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:ring-purple-800 font-medium rounded-lg text-sm px-5 py-2.5 transition-colors duration-200">
+                    Unduh PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Pencarian dan Daftar Barang -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4">Daftar Inventori</h2>
+            
+            <!-- Filter dan Sortir -->
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <!-- Input Pencarian -->
+                <div class="flex-grow">
+                    <label for="searchInput" class="sr-only">Cari</label>
+                    <input type="text" id="searchInput" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Cari berdasarkan nama atau SKU...">
+                </div>
+                <!-- Kontrol Sortir -->
+                <div>
+                    <label for="sortControl" class="sr-only">Urutkan</label>
+                    <select id="sortControl" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <option value="name_asc">Urutkan: Nama (A-Z)</option>
+                        <option value="name_desc">Urutkan: Nama (Z-A)</option>
+                        <option value="price_asc">Urutkan: Harga (Termurah)</option>
+                        <option value="price_desc">Urutkan: Harga (Termahal)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Daftar Barang -->
+            <div id="itemList" class="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+                <!-- Barang akan dimuat di sini oleh JavaScript -->
+                <p id="loadingItems" class="text-gray-400">Memuat barang...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import fungsi-fungsi yang diperlukan dari Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithCustomToken, 
+            signInAnonymously, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            addDoc, 
+            updateDoc, 
+            deleteDoc, 
+            onSnapshot, 
+            query,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Ambil jsPDF dari window global
+        const { jsPDF } = window.jspdf;
+
+        // --- KONFIGURASI DAN OTENTIKASI FIREBASE ---
+
+        // Konfigurasi Firebase diambil dari environment (jangan diubah)
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Inisialisasi Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Aktifkan log untuk debugging
+        setLogLevel('Debug');
+
+        let userId = null;
+        let itemsCollectionRef = null;
+        let allItems = []; // Cache lokal untuk pencarian
+
+        // DOM Elements
+        const authStatus = document.getElementById('authStatus');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const itemForm = document.getElementById('itemForm');
+        const itemNameInput = document.getElementById('itemName');
+        const itemSkuInput = document.getElementById('itemSku');
+        const itemQuantityInput = document.getElementById('itemQuantity');
+        // Elemen baru ditambahkan
+        const itemTypeInput = document.getElementById('itemType');
+        const itemPriceInput = document.getElementById('itemPrice');
+        const sortControl = document.getElementById('sortControl');
+        
+        const searchInput = document.getElementById('searchInput');
+        const itemList = document.getElementById('itemList');
+        const loadingItems = document.getElementById('loadingItems');
+        // Elemen baru
+        const csvFileInput = document.getElementById('csvFile');
+        const importCsvBtn = document.getElementById('importCsvBtn');
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+
+        // Fungsi untuk menangani otentikasi
+        async function setupAuth() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    console.log("Autentikasi berhasil, User ID:", userId);
+                    authStatus.textContent = "Terhubung ke database.";
+                    userIdDisplay.textContent = `ID Sesi Anda: ${userId}`;
+
+                    // Tentukan path koleksi (data pribadi pengguna)
+                    itemsCollectionRef = collection(db, 'artifacts', appId, 'users', userId, 'inventory');
+                    
+                    // Mulai mendengarkan perubahan data
+                    listenToItems();
+
+                } else {
+                    console.log("Tidak ada user, mencoba login...");
+                    authStatus.textContent = "Menghubungkan...";
+                    userId = null;
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Gagal melakukan otentikasi:", error);
+                        authStatus.textContent = "Gagal terhubung ke database.";
+                    }
+                }
+            });
+        }
+
+        // --- FUNGSI UTAMA APLIKASI ---
+
+        // 1. Mendengarkan perubahan data (Real-time)
+        function listenToItems() {
+            if (!itemsCollectionRef) return;
+
+            const q = query(itemsCollectionRef);
+            
+            onSnapshot(q, (snapshot) => {
+                allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // HAPUS sortiran default di sini, karena akan ditangani oleh renderItems
+                // allItems.sort((a, b) => a.name.localeCompare(b.name)); 
+                
+                console.log("Data diterima:", allItems);
+                
+                // Render data berdasarkan filter pencarian saat ini
+                renderItems();
+
+                // Sembunyikan pesan "Memuat..."
+                if (loadingItems) {
+                    loadingItems.style.display = 'none';
+                }
+
+            }, (error) => {
+                console.error("Gagal mengambil data:", error);
+                itemList.innerHTML = '<p class="text-red-400">Gagal memuat data inventori.</p>';
+            });
+        }
+
+        // 2. Merender daftar barang ke UI
+        function renderItems() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const sortValue = sortControl.value;
+            
+            let processedItems = [...allItems]; // Salin data untuk diproses
+
+            // 1. Filter data berdasarkan pencarian
+            if (searchTerm) {
+                processedItems = processedItems.filter(item => 
+                    item.name.toLowerCase().includes(searchTerm) || 
+                    item.sku.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // 2. Sortir data
+            switch (sortValue) {
+                case 'name_asc':
+                    processedItems.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'name_desc':
+                    processedItems.sort((a, b) => b.name.localeCompare(a.name));
+                    break;
+                case 'price_asc':
+                    processedItems.sort((a, b) => (a.price || 0) - (b.price || 0));
+                    break;
+                case 'price_desc':
+                    processedItems.sort((a, b) => (b.price || 0) - (a.price || 0));
+                    break;
+                default:
+                    processedItems.sort((a, b) => a.name.localeCompare(b.name));
+            }
+
+            itemList.innerHTML = ''; // Kosongkan daftar
+
+            if (processedItems.length === 0 && allItems.length > 0) {
+                itemList.innerHTML = '<p class="text-gray-400 text-center">Tidak ada barang yang cocok dengan filter/pencarian.</p>';
+                return;
+            }
+
+            if (processedItems.length === 0 && allItems.length === 0) {
+                 itemList.innerHTML = '<p class="text-gray-400 text-center">Inventori Anda masih kosong. Tambahkan barang baru di atas.</p>';
+                return;
+            }
+
+            processedItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "bg-gray-700 p-4 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4";
+                
+                // Format harga ke Rupiah
+                const formattedPrice = `Rp ${(item.price || 0).toLocaleString('id-ID')}`;
+
+                itemDiv.innerHTML = `
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-lg font-semibold text-blue-300 truncate">${item.name}</h3>
+                        <p class="text-sm text-gray-400">SKU: ${item.sku}</p>
+                        <p class="text-sm text-gray-400">Jenis: ${item.type || 'N/A'}</p>
+                        <p class="text-md font-medium text-green-400">${formattedPrice}</p>
+                    </div>
+                    <div class="flex items-center gap-3 w-full md:w-auto justify-between">
+                        <span class="text-gray-400 text-sm hidden sm:inline">Jumlah:</span>
+                        <!-- INI ADALAH BAGIAN YANG HILANG / RUSAK -->
+                        <span id="qty-${item.id}" class="text-xl font-semibold w-12 text-center">${item.quantity}</span>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <button data-action="dec-qty" data-id="${item.id}" data-qty="${item.quantity}" class="text-white bg-yellow-600 hover:bg-yellow-700 w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-200">-</button>
+                            <button data-action="inc-qty" data-id="${item.id}" data-qty="${item.quantity}" class="text-white bg-green-600 hover:bg-green-700 w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-200">+</button>
+                            <button data-action="delete" data-id="${item.id}" class="text-white bg-red-600 hover:bg-red-700 w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-200">&times;</button>
+                        </div>
+                    </div>
+                `; // <-- Backtick penutup yang benar
+                itemList.appendChild(itemDiv);
+            });
+        }
+
+        // 3. Tambah Barang Baru
+        async function handleAddItem(e) {
+            e.preventDefault();
+            if (!itemsCollectionRef) return;
+            
+            const name = itemNameInput.value;
+            const sku = itemSkuInput.value;
+            const quantity = parseInt(itemQuantityInput.value, 10);
+            const type = itemTypeInput.value;
+            const price = parseInt(itemPriceInput.value, 10);
+
+            if (!name || !sku || !type || isNaN(quantity) || quantity < 0 || isNaN(price) || price < 0) {
+                console.warn("Input tidak valid");
+                // Anda bisa menambahkan UI feedback di sini
+                return;
+            }
+
+            try {
+                await addDoc(itemsCollectionRef, {
+                    name: name,
+                    sku: sku,
+                    quantity: quantity,
+                    type: type,
+                    price: price
+                });
+                console.log("Barang berhasil ditambahkan");
+                itemForm.reset();
+            } catch (error) {
+                console.error("Gagal menambah barang:", error);
+            }
+        }
+
+        // 4. Update Kuantitas
+        async function updateQuantity(id, newQuantity) {
+            if (newQuantity < 0 || !itemsCollectionRef) return; // Tidak boleh negatif
+
+            const itemDocRef = doc(db, 'artifacts', appId, 'users', userId, 'inventory', id);
+            
+            try {
+                await updateDoc(itemDocRef, {
+                    quantity: newQuantity
+                });
+                console.log("Kuantitas diupdate");
+            } catch (error) {
+                console.error("Gagal mengupdate kuantitas:", error);
+            }
+        }
+
+        // 5. Hapus Barang
+        async function deleteItem(id) {
+            if (!itemsCollectionRef) return;
+            // Di aplikasi nyata, tambahkan modal konfirmasi di sini
+            // "Apakah Anda yakin ingin menghapus?"
+            // Sesuai instruksi, kita tidak menggunakan window.confirm()
+            
+            console.log(`Menghapus barang: ${id}`);
+            const itemDocRef = doc(db, 'artifacts', appId, 'users', userId, 'inventory', id);
+            
+            try {
+                await deleteDoc(itemDocRef);
+                console.log("Barang berhasil dihapus");
+            } catch (error) {
+                console.error("Gagal menghapus barang:", error);
+            }
+        }
+        
+        // 6. Import dari CSV
+        async function handleImportCsv() {
+            if (!itemsCollectionRef || !csvFileInput.files || csvFileInput.files.length === 0) {
+                console.warn("Koleksi belum siap atau tidak ada file dipilih.");
+                // Nanti bisa tambahkan notifikasi UI
+                return;
+            }
+
+            const file = csvFileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                const text = e.target.result;
+                // Pisah per baris, buang baris kosong, DAN lewati baris pertama (header) dengan .slice(1)
+                const lines = text.split('\n').filter(line => line.trim() !== '').slice(1); 
+
+                let importedCount = 0;
+                let errorCount = 0;
+                
+                // Tampilkan notifikasi loading (opsional)
+                authStatus.textContent = `Mengimpor ${lines.length} barang...`;
+
+                for (const line of lines) {
+                    try {
+                        // FIX 1: Ubah split dari ',' ke ';'
+                        // FIX 2: Sesuaikan urutan kolom agar cocok dengan CSV: [SKU, Jenis, Jumlah, Nama, Harga]
+                        const [sku, type, quantityStr, name, priceStr_raw] = line.split(';');
+                        
+                        // FIX 4: Bersihkan format harga (hapus titik ribuan)
+                        // Tambahkan trim() untuk membersihkan spasi ekstra
+                        const priceStr = priceStr_raw ? priceStr_raw.trim().replace(/\./g, '') : '0'; 
+                        
+                        const quantity = parseInt(quantityStr, 10);
+                        const price = parseInt(priceStr, 10);
+
+                        // Periksa apakah semua data valid (name, sku, dan type tidak kosong)
+                        if (name && name.trim() && sku && sku.trim() && type && type.trim() && !isNaN(quantity) && quantity >= 0 && !isNaN(price) && price >= 0) {
+                            await addDoc(itemsCollectionRef, {
+                                name: name.trim(),
+                                sku: sku.trim(),
+                                quantity: quantity,
+                                price: price,
+                                type: type.trim()
+                            });
+                            importedCount++;
+                        } else {
+                            console.warn(`Baris dilewati (format salah): ${line}`);
+                            errorCount++;
+                        }
+                    } catch (error) {
+                        console.error(`Gagal mengimpor baris: ${line}`, error);
+                        errorCount++;
+                    }
+                }
+                
+                authStatus.textContent = `Berhasil mengimpor ${importedCount} barang. Gagal: ${errorCount}.`;
+                setTimeout(() => { authStatus.textContent = "Terhubung ke database."; }, 5000);
+                
+                console.log(`Berhasil mengimpor ${importedCount} barang.`);
+                csvFileInput.value = ''; // Reset input file
+            };
+
+            reader.onerror = (e) => {
+                console.error("Gagal membaca file CSV:", e);
+                authStatus.textContent = "Gagal membaca file CSV.";
+            };
+
+            reader.readAsText(file);
+        }
+
+        // 7. Unduh PDF
+        function handleDownloadPdf() {
+            if (allItems.length === 0) {
+                console.warn("Tidak ada data untuk diekspor.");
+                // Nanti bisa tambahkan notifikasi UI
+                return;
+            }
+
+            // Buat dokumen PDF baru
+            const doc = new jsPDF();
+            const title = "Laporan Inventori - GUDANG IWAN AQUARIUM";
+            const date = new Date().toLocaleString('id-ID');
+
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(11);
+            doc.text(`Dicetak pada: ${date}`, 14, 30);
+            doc.line(14, 32, 196, 32); // Garis pemisah
+
+            // Header Tabel
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text("Nama Barang", 14, 40);
+            doc.text("SKU", 70, 40);
+            doc.text("Jenis", 100, 40);
+            doc.text("Harga", 140, 40, { align: 'right' });
+            doc.text("Jumlah", 180, 40, { align: 'right' });
+            doc.setFont(undefined, 'normal');
+            doc.line(14, 42, 196, 42); // Garis pemisah
+
+            let yPos = 49; // Mulai Y-posisi untuk data
+            
+            // Urutkan data sesuai dengan sortiran saat ini sebelum diekspor
+            // (Kita bisa menggunakan fungsi renderItems untuk mendapatkan data terurut,
+            // tapi lebih mudah mengurutkan ulang di sini)
+            const sortedItems = [...allItems]; // Salin
+            const sortValue = sortControl.value;
+            switch (sortValue) {
+                case 'name_asc': sortedItems.sort((a, b) => a.name.localeCompare(b.name)); break;
+                case 'name_desc': sortedItems.sort((a, b) => b.name.localeCompare(a.name)); break;
+                case 'price_asc': sortedItems.sort((a, b) => (a.price || 0) - (b.price || 0)); break;
+                case 'price_desc': sortedItems.sort((a, b) => (b.price || 0) - (a.price || 0)); break;
+                default: sortedItems.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            
+            sortedItems.forEach((item, index) => {
+                // Beri background abu-abu/putih bergantian
+                if (index % 2 === 0) {
+                    doc.setFillColor(240, 240, 240);
+                    doc.rect(14, yPos - 5, 182, 7, 'F');
+                }
+
+                doc.text(item.name, 14, yPos);
+                doc.text(item.sku, 70, yPos);
+                doc.text(item.type || 'N/A', 100, yPos);
+                doc.text((item.price || 0).toLocaleString('id-ID'), 140, yPos, { align: 'right' });
+                doc.text(item.quantity.toString(), 180, yPos, { align: 'right' });
+                yPos += 7; // Pindah ke baris berikutnya
+
+                // Jika halaman penuh, buat halaman baru
+                if (yPos > 280) {
+                    doc.addPage();
+                    yPos = 20; // Reset Y pos
+                    // (Opsional) Ulangi header tabel di halaman baru
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.text("Nama Barang", 14, yPos);
+                    doc.text("SKU", 70, yPos);
+                    doc.text("Jenis", 100, yPos);
+                    doc.text("Harga", 140, yPos, { align: 'right' });
+                    doc.text("Jumlah", 180, yPos, { align: 'right' });
+                    doc.setFont(undefined, 'normal');
+                    yPos += 7;
+                }
+            });
+
+            // Simpan file
+            doc.save("laporan-inventori-iwan-aquarium.pdf");
+        }
+
+        // --- EVENT LISTENERS ---
+
+        // Listener untuk form tambah barang
+        itemForm.addEventListener('submit', handleAddItem);
+
+        // Listener untuk pencarian (real-time)
+        searchInput.addEventListener('input', renderItems); // Cukup render ulang
+
+        // Listener untuk dropdown sortir baru
+        sortControl.addEventListener('change', renderItems);
+
+        // Listener untuk tombol import CSV
+        importCsvBtn.addEventListener('click', handleImportCsv);
+
+        // Listener untuk tombol unduh PDF
+        downloadPdfBtn.addEventListener('click', handleDownloadPdf);
+
+        // Listener untuk tombol-tombol (Delete, Inc, Dec)
+        // Menggunakan event delegation
+        itemList.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            const id = e.target.dataset.id;
+
+            if (!action || !id) return;
+
+            if (action === 'delete') {
+                deleteItem(id);
+            }
+
+            if (action === 'inc-qty') {
+                const currentQty = parseInt(e.target.dataset.qty, 10);
+                updateQuantity(id, currentQty + 1);
+            }
+
+            if (action === 'dec-qty') {
+                const currentQty = parseInt(e.target.dataset.qty, 10);
+                updateQuantity(id, currentQty - 1);
+            }
+        });
+
+        // --- INISIALISASI ---
+        setupAuth(); // Mulai proses otentikasi saat script dimuat
+
+    </script>
+</body>
+</html>
